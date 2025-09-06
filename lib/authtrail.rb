@@ -9,7 +9,7 @@ module AuthTrail
   autoload :GeocodeJob, "auth_trail/geocode_job"
 
   class << self
-    attr_accessor :exclude_method, :geocode, :track_method, :identity_method, :job_queue, :transform_method
+    attr_accessor :exclude_method, :geocode, :track_method, :identity_method, :job_queue, :transform_method, :set_after_user_exclude
   end
   self.geocode = false
   self.track_method = lambda do |data|
@@ -69,6 +69,12 @@ module AuthTrail
 end
 
 Warden::Manager.after_set_user except: :fetch do |user, auth, opts|
+  if (exclude_method = AuthTrail.set_after_user_exclude)
+    request = ActionDispatch::Request.new(auth.env)
+
+    next if exclude_method.call(request)
+  end
+
   AuthTrail::Manager.after_set_user(user, auth, opts)
 end
 
